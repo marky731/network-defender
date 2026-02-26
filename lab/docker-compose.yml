@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # Web Server - Apache (older version for CVE matching)
+  web-apache:
+    image: httpd:2.4.41
+    networks:
+      lab-net:
+        ipv4_address: 172.30.0.10
+    ports:
+      - "8081:80"
+
+  # Web Server - Nginx + SSL
+  web-nginx:
+    image: nginx:1.18.0
+    volumes:
+      - ./ssl-certs:/etc/nginx/ssl:ro
+    networks:
+      lab-net:
+        ipv4_address: 172.30.0.11
+    ports:
+      - "8443:443"
+
+  # SSH Server (weak credentials)
+  ssh-server:
+    image: linuxserver/openssh-server:latest
+    environment:
+      PASSWORD_ACCESS: "true"
+      USER_NAME: "admin"
+      USER_PASSWORD: "admin"
+    networks:
+      lab-net:
+        ipv4_address: 172.30.0.12
+    ports:
+      - "2222:2222"
+
+  # FTP Server (anonymous access enabled)
+  ftp-server:
+    image: delfer/alpine-ftp-server:latest
+    environment:
+      USERS: "testuser|testpass"
+    networks:
+      lab-net:
+        ipv4_address: 172.30.0.13
+    ports:
+      - "2121:21"
+
+  # MySQL (default root password)
+  mysql-server:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: "root"
+    networks:
+      lab-net:
+        ipv4_address: 172.30.0.14
+    ports:
+      - "3307:3306"
+
+  # Redis (no auth - misconfiguration)
+  redis-server:
+    image: redis:6.0
+    networks:
+      lab-net:
+        ipv4_address: 172.30.0.15
+    ports:
+      - "6380:6379"
+
+networks:
+  lab-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24

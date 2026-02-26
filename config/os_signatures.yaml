@@ -1,0 +1,56 @@
+# OS fingerprint signatures based on TTL and TCP window size
+signatures:
+  linux:
+    os_family: linux
+    ttl_values: [64]
+    window_sizes: [5840, 29200, 65535, 64240]
+    banner_patterns:
+      - "Ubuntu"
+      - "Debian"
+      - "CentOS"
+      - "Red Hat"
+      - "Fedora"
+      - "Linux"
+      - "linux"
+
+  windows:
+    os_family: windows
+    ttl_values: [128]
+    window_sizes: [8192, 65535, 64240]
+    banner_patterns:
+      - "Windows"
+      - "Microsoft"
+      - "IIS"
+      - "Win32"
+      - "Win64"
+
+  macos:
+    os_family: macos
+    ttl_values: [64]
+    window_sizes: [65535]
+    banner_patterns:
+      - "Darwin"
+      - "macOS"
+      - "Mac OS X"
+      - "Apple"
+
+  bsd:
+    os_family: bsd
+    ttl_values: [64]
+    window_sizes: [65535, 16384]
+    banner_patterns:
+      - "FreeBSD"
+      - "OpenBSD"
+      - "NetBSD"
+
+  network_device:
+    os_family: network_device
+    ttl_values: [255, 64]
+    window_sizes: [4128, 8192]
+    banner_patterns:
+      - "Cisco"
+      - "MikroTik"
+      - "Juniper"
+      - "RouterOS"
+      - "JUNOS"
+      - "IOS"

@@ -1,0 +1,71 @@
+# Service detection patterns (regex)
+# Each pattern has: regex, service_name, version_group (regex group index for version)
+banner_patterns:
+  ssh:
+    regex: "SSH-(\\d+\\.\\d+)-(.+)"
+    service_name: ssh
+    version_group: 2
+
+  http:
+    regex: "HTTP/(\\d+\\.\\d+)"
+    service_name: http
+    version_group: 1
+
+  ftp:
+    regex: "220[- ](.*)"
+    service_name: ftp
+    version_group: 1
+
+  smtp:
+    regex: "220[- ](.*)(?:SMTP|smtp)"
+    service_name: smtp
+    version_group: 1
+
+  pop3:
+    regex: "\\+OK (.*)"
+    service_name: pop3
+    version_group: 1
+
+  imap:
+    regex: "\\* OK (.*)IMAP"
+    service_name: imap
+    version_group: 1
+
+  mysql:
+    regex: "mysql|MariaDB"
+    service_name: mysql
+    version_group: 0
+
+  redis:
+    regex: "\\+PONG|-ERR|redis_version:(\\S+)"
+    service_name: redis
+    version_group: 1
+
+  telnet:
+    regex: "\\xff[\\xfb\\xfd\\xfe]"
+    service_name: telnet
+    version_group: 0
+
+  vnc:
+    regex: "RFB (\\d+\\.\\d+)"
+    service_name: vnc
+    version_group: 1
+
+http_headers:
+  server_patterns:
+    - regex: "Apache/(\\S+)"
+      service_name: apache
+    - regex: "nginx/(\\S+)"
+      service_name: nginx
+    - regex: "Microsoft-IIS/(\\S+)"
+      service_name: iis
+    - regex: "lighttpd/(\\S+)"
+      service_name: lighttpd
+
+  security_headers:
+    - X-Frame-Options
+    - X-Content-Type-Options
+    - Strict-Transport-Security
+    - Content-Security-Policy
+    - X-XSS-Protection
+    - Referrer-Policy

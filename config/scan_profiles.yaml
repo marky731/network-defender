@@ -1,0 +1,27 @@
+# Scan profile configuration
+defaults:
+  profile: quick
+  timeout: 5.0
+  max_concurrency: 100
+
+profiles:
+  quick:
+    description: "Fast scan - top 20 TCP + 10 UDP ports"
+    timeout: 3.0
+    max_concurrency: 50
+    tcp_port_count: 20
+    udp_port_count: 10
+
+  moderate:
+    description: "Balanced scan - ~100 TCP + ~20 UDP ports"
+    timeout: 5.0
+    max_concurrency: 100
+    tcp_port_count: 100
+    udp_port_count: 20
+
+  deep:
+    description: "Comprehensive scan - 1-1024 + high ports TCP + ~30 UDP"
+    timeout: 10.0
+    max_concurrency: 200
+    tcp_port_count: 1100
+    udp_port_count: 30

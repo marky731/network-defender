@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Network Defender</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js"></script>
+  <style>
+    @keyframes pulse-ring {
+      0% { transform: scale(0.8); opacity: 1; }
+      100% { transform: scale(1.4); opacity: 0; }
+    }
+    .pulse-ring::before {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 9999px;
+      border: 2px solid rgb(34 211 238 / 0.4);
+      animation: pulse-ring 1.5s ease-out infinite;
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #111827; }
+    ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+  </style>
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen">
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- HEADER                                                                 -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<header class="border-b border-gray-800 bg-gray-900/80 backdrop-blur-sm sticky top-0 z-50">
+  <div class="max-w-7xl mx-auto px-6 py-3 flex items-center gap-3">
+    <i data-lucide="shield" class="w-6 h-6 text-cyan-400"></i>
+    <h1 class="text-lg font-bold tracking-tight">Network Defender</h1>
+    <span class="text-gray-500 text-sm hidden sm:inline">Scan &amp; Observe</span>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- VIEW 1 : SCAN FORM                                                     -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div id="view-form" class="flex items-center justify-center" style="min-height:calc(100vh - 56px)">
+  <div class="w-full max-w-lg px-4">
+    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-8 shadow-2xl shadow-cyan-500/5">
+      <!-- heading -->
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-cyan-500/10 mb-4">
+          <i data-lucide="radar" class="w-8 h-8 text-cyan-400"></i>
+        </div>
+        <h2 class="text-2xl font-bold">Network Scan</h2>
+        <p class="text-gray-400 mt-1 text-sm">Discover hosts and assess vulnerabilities</p>
+      </div>
+      <!-- target -->
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-300 mb-2">Target</label>
+        <input type="text" id="target-input" placeholder="172.30.0.0/24"
+               class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white
+                      font-mono placeholder-gray-500
+                      focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition">
+      </div>
+      <!-- profiles -->
+      <div class="mb-8">
+        <label class="block text-sm font-medium text-gray-300 mb-3">Scan Profile</label>
+        <div class="grid grid-cols-3 gap-3">
+          <label class="cursor-pointer">
+            <input type="radio" name="profile" value="quick" class="hidden peer" checked>
+            <div class="p-3 border border-gray-700 rounded-lg text-center
+                        peer-checked:border-cyan-500 peer-checked:bg-cyan-500/10 transition">
+              <i data-lucide="zap" class="w-5 h-5 mx-auto mb-1 text-cyan-400"></i>
+              <div class="font-medium text-sm">Quick</div>
+              <div class="text-xs text-gray-500 mt-1">20 TCP ports</div>
+            </div>
+          </label>
+          <label class="cursor-pointer">
+            <input type="radio" name="profile" value="moderate" class="hidden peer">
+            <div class="p-3 border border-gray-700 rounded-lg text-center
+                        peer-checked:border-cyan-500 peer-checked:bg-cyan-500/10 transition">
+              <i data-lucide="shield" class="w-5 h-5 mx-auto mb-1 text-cyan-400"></i>
+              <div class="font-medium text-sm">Moderate</div>
+              <div class="text-xs text-gray-500 mt-1">~100 TCP ports</div>
+            </div>
+          </label>
+          <label class="cursor-pointer">
+            <input type="radio" name="profile" value="deep" class="hidden peer">
+            <div class="p-3 border border-gray-700 rounded-lg text-center
+                        peer-checked:border-cyan-500 peer-checked:bg-cyan-500/10 transition">
+              <i data-lucide="scan" class="w-5 h-5 mx-auto mb-1 text-cyan-400"></i>
+              <div class="font-medium text-sm">Deep</div>
+              <div class="text-xs text-gray-500 mt-1">1024+ ports</div>
+            </div>
+          </label>
+        </div>
+      </div>
+      <!-- button -->
+      <button onclick="startScan()" id="btn-start"
+              class="w-full py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-medium rounded-lg
+                     transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+        <i data-lucide="play" class="w-4 h-4"></i>
+        Start Scan
+      </button>
+      <p id="form-error" class="text-red-400 text-sm mt-3 text-center hidden"></p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- VIEW 2 : SCAN PROGRESS                                                -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div id="view-progress" class="hidden max-w-5xl mx-auto px-6 py-8">
+  <div class="grid grid-cols-1 md:grid-cols-5 gap-8">
+    <!-- left: pipeline layers -->
+    <div class="md:col-span-2">
+      <h3 class="text-lg font-semibold mb-5 flex items-center gap-2">
+        <i data-lucide="layers" class="w-5 h-5 text-cyan-400"></i>
+        Pipeline Progress
+      </h3>
+      <div id="pipeline-layers"></div>
+    </div>
+    <!-- right: host progress -->
+    <div class="md:col-span-3">
+      <h3 class="text-lg font-semibold mb-5 flex items-center gap-2">
+        <i data-lucide="server" class="w-5 h-5 text-cyan-400"></i>
+        Host Progress
+        <span id="host-count" class="text-sm text-gray-400 font-normal"></span>
+      </h3>
+      <div class="space-y-2" id="host-progress">
+        <div class="text-gray-500 text-sm italic">Waiting for host discovery&hellip;</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- VIEW 3 : RESULTS DASHBOARD                                            -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div id="view-results" class="hidden max-w-6xl mx-auto px-6 py-8">
+  <!-- stats row -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8" id="stats-cards"></div>
+
+  <!-- host table -->
+  <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden mb-8">
+    <div class="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
+      <h3 class="font-semibold flex items-center gap-2">
+        <i data-lucide="server" class="w-5 h-5 text-cyan-400"></i>
+        Discovered Hosts
+      </h3>
+      <button onclick="showView('form')"
+              class="text-sm text-cyan-400 hover:text-cyan-300 flex items-center gap-1">
+        <i data-lucide="plus" class="w-4 h-4"></i> New Scan
+      </button>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="text-xs text-gray-400 uppercase bg-gray-900/50">
+          <tr>
+            <th class="px-6 py-3 text-left">IP Address</th>
+            <th class="px-6 py-3 text-left">OS</th>
+            <th class="px-6 py-3 text-center">Ports</th>
+            <th class="px-6 py-3 text-center">CVEs</th>
+            <th class="px-6 py-3 text-center">Creds</th>
+            <th class="px-6 py-3 text-center">Misconfig</th>
+            <th class="px-6 py-3 text-center w-10"></th>
+          </tr>
+        </thead>
+        <tbody id="host-table-body" class="divide-y divide-gray-800/50"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- heatmap -->
+  <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+    <h3 class="font-semibold mb-4 flex items-center gap-2">
+      <i data-lucide="grid-3x3" class="w-5 h-5 text-cyan-400"></i>
+      Observation Vector Heatmap
+      <span class="text-sm text-gray-400 font-normal">(256 &times; 47)</span>
+    </h3>
+    <div class="flex justify-center overflow-x-auto">
+      <canvas id="heatmap-canvas" class="rounded border border-gray-700"></canvas>
+    </div>
+    <div class="flex justify-center gap-6 mt-3 text-xs text-gray-500">
+      <span class="flex items-center gap-1">
+        <span class="w-3 h-3 rounded bg-gray-800 border border-gray-700 inline-block"></span> 0.0
+      </span>
+      <span class="flex items-center gap-1">
+        <span class="w-3 h-3 rounded inline-block" style="background:#164e63"></span> Low
+      </span>
+      <span class="flex items-center gap-1">
+        <span class="w-3 h-3 rounded inline-block" style="background:#06b6d4"></span> Mid
+      </span>
+      <span class="flex items-center gap-1">
+        <span class="w-3 h-3 rounded inline-block" style="background:#67e8f9"></span> High
+      </span>
+      <span class="flex items-center gap-1">
+        <span class="w-3 h-3 rounded bg-white inline-block"></span> 1.0
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- VIEW 4 : HOST DETAIL                                                   -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div id="view-detail" class="hidden max-w-5xl mx-auto px-6 py-8">
+  <button onclick="showView('results')"
+          class="text-cyan-400 hover:text-cyan-300 flex items-center gap-1 mb-6 text-sm">
+    <i data-lucide="arrow-left" class="w-4 h-4"></i>
+    Back to Results
+  </button>
+  <div id="host-detail-content"></div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- JAVASCRIPT                                                             -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<script>
+// ── State ────────────────────────────────────────────────────────────────
+let scanId      = null;
+let scanResult  = null;
+let vectorData  = null;
+const hostState = {};          // ip -> { layer, status }
+
+// ── Helpers ──────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+function showView(name) {
+  ['form','progress','results','detail'].forEach(v =>
+    $('view-' + v).classList.toggle('hidden', v !== name));
+}
+
+function sevClass(s) {
+  const m = {
+    critical: 'bg-red-500/20 text-red-400 border border-red-500/30',
+    high:     'bg-orange-500/20 text-orange-400 border border-orange-500/30',
+    medium:   'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30',
+    low:      'bg-green-500/20 text-green-400 border border-green-500/30',
+  };
+  return m[s] || 'bg-gray-500/20 text-gray-400 border border-gray-500/30';
+}
+
+function esc(s) { // basic HTML escape
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// spinner SVG reused in several places
+const SPINNER = `<svg class="animate-spin w-4 h-4 text-cyan-400" xmlns="http://www.w3.org/2000/svg"
+  fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10"
+  stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor"
+  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>`;
+
+const CHECK = `<svg class="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24"
+  stroke="currentColor" stroke-width="3"><path stroke-linecap="round"
+  stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`;
+
+
+// ═════════════════════════════════════════════════════════════════════════
+// 1) SCAN START
+// ═════════════════════════════════════════════════════════════════════════
+async function startScan() {
+  const target = $('target-input').value.trim();
+  if (!target) {
+    $('form-error').textContent = 'Please enter a target IP or CIDR.';
+    $('form-error').classList.remove('hidden');
+    return;
+  }
+  $('form-error').classList.add('hidden');
+
+  const profile = document.querySelector('input[name=profile]:checked').value;
+  const btn = $('btn-start');
+  btn.disabled = true;
+  btn.innerHTML = SPINNER + ' Starting\u2026';
+
+  try {
+    const res = await fetch('/api/scans', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({target, profile}),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Failed to start scan');
+    }
+    const data = await res.json();
+    scanId = data.scan_id;
+    initProgress();
+    showView('progress');
+    connectSSE(scanId);
+  } catch (e) {
+    $('form-error').textContent = e.message;
+    $('form-error').classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="play" class="w-4 h-4"></i> Start Scan';
+    lucide.createIcons();
+  }
+}
+
+
+// ═════════════════════════════════════════════════════════════════════════
+// 2) PROGRESS VIEW
+// ═════════════════════════════════════════════════════════════════════════
+const LAYERS = [
+  {id:1, name:'Host Discovery',          icon:'radio'},
+  {id:2, name:'Port Scanning',           icon:'lock'},
+  {id:3, name:'Service Detection',       icon:'search'},
+  {id:4, name:'OS Fingerprinting',       icon:'cpu'},
+  {id:5, name:'Vulnerability Assessment',icon:'alert-triangle'},
+];
+
+function initProgress() {
+  // reset host state
+  Object.keys(hostState).forEach(k => delete hostState[k]);
+
+  // build layer timeline
+  $('pipeline-layers').innerHTML = LAYERS.map((l, i) => `
+    <div class="flex items-start gap-3" id="pl-${l.id}">
+      <div class="flex flex-col items-center">
+        <div class="relative w-10 h-10 rounded-full border-2 border-gray-700
+                    flex items-center justify-center bg-gray-900"
+             id="pl-icon-${l.id}">
+          <span class="text-gray-500 text-sm font-mono">${l.id}</span>
+        </div>
+        ${i < LAYERS.length - 1
+          ? '<div class="w-0.5 h-6 bg-gray-800 mx-auto"></div>'
+          : ''}
+      </div>
+      <div class="pt-2">
+        <div class="font-medium text-sm text-gray-300">${l.name}</div>
+        <div class="text-xs text-gray-500 mt-0.5" id="pl-status-${l.id}">Pending</div>
+      </div>
+    </div>
+  `).join('');
+
+  $('host-progress').innerHTML =
+    '<div class="text-gray-500 text-sm italic">Waiting for host discovery&hellip;</div>';
+  $('host-count').textContent = '';
+}
+
+function updateLayer(layer, status, detail) {
+  const icon = $('pl-icon-' + layer);
+  const stat = $('pl-status-' + layer);
+  if (!icon || !stat) return;
+
+  if (status === 'started') {
+    icon.className = 'relative w-10 h-10 rounded-full border-2 border-cyan-500 ' +
+                     'flex items-center justify-center bg-cyan-500/10 pulse-ring';
+    icon.innerHTML = SPINNER;
+    stat.textContent = 'Running\u2026';
+    stat.className = 'text-xs text-cyan-400 mt-0.5';
+  } else if (status === 'completed') {
+    icon.className = 'relative w-10 h-10 rounded-full border-2 border-green-500 ' +
+                     'flex items-center justify-center bg-green-500/10';
+    icon.innerHTML = CHECK;
+    stat.textContent = detail || 'Completed';
+    stat.className = 'text-xs text-green-400 mt-0.5';
+  }
+}
+
+function updateHostProgress(ip, layer, status, detail) {
+  const safeIp = ip.replace(/\./g, '-');
+
+  if (!hostState[ip]) {
+    hostState[ip] = {layer, status};
+    // first host -> clear placeholder
+    if (Object.keys(hostState).length === 1) $('host-progress').innerHTML = '';
+
+    const div = document.createElement('div');
+    div.id = 'hp-' + safeIp;
+    div.className = 'bg-gray-900 border border-gray-800 rounded-lg p-3 flex items-center gap-3';
+    div.innerHTML = `
+      <span class="font-mono text-cyan-400 text-sm w-32 shrink-0">${esc(ip)}</span>
+      <div class="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+        <div class="h-full bg-cyan-500 rounded-full transition-all duration-500"
+             id="hp-bar-${safeIp}" style="width:5%"></div>
+      </div>
+      <span class="text-xs text-gray-400 w-20 text-right shrink-0"
+            id="hp-lbl-${safeIp}">L${layer}</span>`;
+    $('host-progress').appendChild(div);
+    $('host-count').textContent = '(' + Object.keys(hostState).length + ' hosts)';
+  }
+
+  hostState[ip].layer = layer;
+  hostState[ip].status = status;
+
+  const bar = $('hp-bar-' + safeIp);
+  const lbl = $('hp-lbl-' + safeIp);
+  if (!bar || !lbl) return;
+
+  const pct = status === 'completed' ? (layer / 5) * 100 : ((layer - 0.5) / 5) * 100;
+  bar.style.width = pct + '%';
+
+  if (status === 'completed' && layer === 5) {
+    bar.className = 'h-full bg-green-500 rounded-full transition-all duration-500';
+    lbl.textContent = 'Done';
+    lbl.className = 'text-xs text-green-400 w-20 text-right shrink-0';
+  } else if (status === 'started') {
+    lbl.textContent = 'L' + layer + ' \u2026';
+  } else {
+    lbl.textContent = 'L' + layer + ' \u2713';
+  }
+}
+
+
+// ═════════════════════════════════════════════════════════════════════════
+// 3) SSE
+// ═════════════════════════════════════════════════════════════════════════
+function connectSSE(sid) {
+  const es = new EventSource('/api/scans/' + sid + '/progress');
+
+  es.onmessage = e => {
+    const evt = JSON.parse(e.data);
+
+    if (evt.type === 'layer')      updateLayer(evt.layer, evt.status, evt.detail);
+    if (evt.type === 'host_layer') updateHostProgress(evt.ip, evt.layer, evt.status, evt.detail);
+
+    if (evt.type === 'done') {
+      es.close();
+      setTimeout(() => loadResults(sid), 600);
+    }
+    if (evt.type === 'error') {
+      es.close();
+      alert('Scan error: ' + (evt.message || 'Unknown error'));
+      showView('form');
+    }
+  };
+
+  es.onerror = () => { /* browser will auto-retry; we rely on 'done' event */ };
+}
+
+
+// ═════════════════════════════════════════════════════════════════════════
+// 4) RESULTS DASHBOARD
+// ═════════════════════════════════════════════════════════════════════════
+async function loadResults(sid) {
+  const [scanRes, vecRes] = await Promise.all([
+    fetch('/api/scans/' + sid).then(r => r.json()),
+    fetch('/api/scans/' + sid + '/vector').then(r => r.json()),
+  ]);
+  scanResult = scanRes.result;
+  vectorData = vecRes;
+  renderDashboard();
+  showView('results');
+}
+
+function renderDashboard() {
+  if (!scanResult) return;
+  const hosts = scanResult.hosts.filter(h => h.is_alive);
+
+  const totalPorts = hosts.reduce((s, h) =>
+    s + h.ports.filter(p => p.state === 'open').length, 0);
+  const totalCves  = hosts.reduce((s, h) => s + h.cves.length, 0);
+  const totalCreds = hosts.reduce((s, h) =>
+    s + h.credential_results.filter(c => c.success).length, 0);
+
+  let duration = '\u2014';
+  if (scanResult.scan_start && scanResult.scan_end) {
+    const ms = new Date(scanResult.scan_end) - new Date(scanResult.scan_start);
+    duration = (ms / 1000).toFixed(1) + 's';
+  }
+
+  // stat cards
+  $('stats-cards').innerHTML = [
+    {n: hosts.length,  label: 'Alive Hosts', icon: 'server',          color: 'cyan'},
+    {n: totalPorts,    label: 'Open Ports',   icon: 'lock',            color: 'blue'},
+    {n: totalCves,     label: 'CVEs Found',   icon: 'alert-triangle',  color: 'red'},
+    {n: duration,      label: 'Duration',     icon: 'clock',           color: 'green'},
+  ].map(c => `
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-${c.color}-500/10 flex items-center justify-center">
+          <i data-lucide="${c.icon}" class="w-5 h-5 text-${c.color}-400"></i>
+        </div>
+        <div>
+          <div class="text-2xl font-bold">${c.n}</div>
+          <div class="text-xs text-gray-400">${c.label}</div>
+        </div>
+      </div>
+    </div>`).join('');
+
+  // host table
+  $('host-table-body').innerHTML = hosts.map((h, i) => {
+    const op = h.ports.filter(p => p.state === 'open').length;
+    const os = h.os_guess.os_detail || h.os_guess.os_family || '\u2014';
+    const mc = h.cves.length
+      ? Math.max(...h.cves.map(c => c.cvss_score))
+      : 0;
+    const sev = mc >= 9 ? 'critical' : mc >= 7 ? 'high' : mc >= 4 ? 'medium' : mc > 0 ? 'low' : '';
+    const cr = h.credential_results.filter(c => c.success).length;
+    return `
+      <tr class="hover:bg-gray-800/30 cursor-pointer" onclick="showHost(${i})">
+        <td class="px-6 py-3 font-mono text-cyan-400 text-sm">${esc(h.ip)}</td>
+        <td class="px-6 py-3 text-sm text-gray-300">${esc(os)}</td>
+        <td class="px-6 py-3 text-center">
+          <span class="bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded text-xs font-mono">${op}</span>
+        </td>
+        <td class="px-6 py-3 text-center">
+          ${h.cves.length
+            ? '<span class="' + sevClass(sev) + ' px-2 py-0.5 rounded text-xs">' + h.cves.length + '</span>'
+            : '<span class="text-gray-600">\u2014</span>'}
+        </td>
+        <td class="px-6 py-3 text-center">
+          ${cr
+            ? '<span class="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-xs">' + cr + '</span>'
+            : '<span class="text-gray-600">\u2014</span>'}
+        </td>
+        <td class="px-6 py-3 text-center">
+          ${h.misconfigurations.length
+            ? '<span class="bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded text-xs">' + h.misconfigurations.length + '</span>'
+            : '<span class="text-gray-600">\u2014</span>'}
+        </td>
+        <td class="px-6 py-3 text-center">
+          <i data-lucide="chevron-right" class="w-4 h-4 text-gray-500 inline-block"></i>
+        </td>
+      </tr>`;
+  }).join('');
+
+  // heatmap
+  if (vectorData && vectorData.data) renderHeatmap(vectorData.data);
+
+  lucide.createIcons();
+}
+
+
+// ── Heatmap ──────────────────────────────────────────────────────────────
+function renderHeatmap(data) {
+  const canvas = $('heatmap-canvas');
+  const ctx = canvas.getContext('2d');
+
+  // find last row with any non-zero value
+  let rows = 1;
+  for (let r = 0; r < data.length; r++) {
+    if (data[r] && data[r].some(v => v > 0)) rows = r + 1;
+  }
+
+  const cw = 10, ch = 4;
+  canvas.width  = 47 * cw;
+  canvas.height = rows * ch;
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < 47; c++) {
+      const v = (data[r] && data[r][c]) || 0;
+      if (v === 0) {
+        ctx.fillStyle = '#111827';
+      } else {
+        // cyan-based color ramp
+        const t = Math.min(v, 1);
+        const red   = Math.round(t * 160);
+        const green = Math.round(25 + t * 210);
+        const blue  = Math.round(60 + t * 195);
+        ctx.fillStyle = 'rgb(' + red + ',' + green + ',' + blue + ')';
+      }
+      ctx.fillRect(c * cw, r * ch, cw - 1, ch - 1);
+    }
+  }
+}
+
+
+// ═════════════════════════════════════════════════════════════════════════
+// 5) HOST DETAIL
+// ═════════════════════════════════════════════════════════════════════════
+function showHost(index) {
+  const hosts = scanResult.hosts.filter(h => h.is_alive);
+  const h = hosts[index];
+  if (!h) return;
+
+  const openPorts = h.ports.filter(p => p.state === 'open');
+  const osLabel   = h.os_guess.os_detail || h.os_guess.os_family || 'Unknown';
+  const conf      = Math.round((h.os_guess.confidence || 0) * 100);
+
+  let html = '';
+
+  // ── header card ────────────────────────────────────────────────────────
+  html += `
+  <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+      <div>
+        <h2 class="text-2xl font-bold font-mono text-cyan-400">${esc(h.ip)}</h2>
+        <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-gray-400">
+          ${h.mac ? '<span>MAC: <span class="font-mono">' + esc(h.mac) + '</span></span>' : ''}
+          ${h.hostname ? '<span>Hostname: ' + esc(h.hostname) + '</span>' : ''}
+        </div>
+      </div>
+      <div class="sm:text-right shrink-0">
+        <div class="text-sm text-gray-400">OS Fingerprint</div>
+        <div class="font-medium mt-0.5">${esc(osLabel)}</div>
+        <div class="w-32 h-2 bg-gray-800 rounded-full mt-2 overflow-hidden ${conf > 0 ? '' : 'opacity-40'}">
+          <div class="h-full bg-cyan-500 rounded-full" style="width:${conf}%"></div>
+        </div>
+        <div class="text-xs text-gray-500 mt-1">${conf}% confidence</div>
+      </div>
+    </div>
+  </div>`;
+
+  // ── open ports table ───────────────────────────────────────────────────
+  if (openPorts.length) {
+    html += `
+    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden mb-6">
+      <div class="px-6 py-4 border-b border-gray-800">
+        <h3 class="font-semibold flex items-center gap-2">
+          <i data-lucide="lock" class="w-4 h-4 text-blue-400"></i>
+          Open Ports (${openPorts.length})
+        </h3>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="text-xs text-gray-400 uppercase bg-gray-900/50">
+            <tr>
+              <th class="px-6 py-2 text-left">Port</th>
+              <th class="px-6 py-2 text-left">Proto</th>
+              <th class="px-6 py-2 text-left">Service</th>
+              <th class="px-6 py-2 text-left">Version</th>
+              <th class="px-6 py-2 text-left">Banner</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-800/50">
+            ${openPorts.map(p => `
+            <tr>
+              <td class="px-6 py-2 font-mono text-cyan-400">${p.port}</td>
+              <td class="px-6 py-2 text-sm uppercase text-gray-300">${esc(p.protocol)}</td>
+              <td class="px-6 py-2 text-sm">${esc(p.service_name || '\u2014')}</td>
+              <td class="px-6 py-2 text-sm font-mono text-gray-300">${esc(p.service_version || '\u2014')}</td>
+              <td class="px-6 py-2 text-sm text-gray-400 font-mono truncate max-w-xs">${esc(p.banner || '\u2014')}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  }
+
+  // ── SSL certificates ───────────────────────────────────────────────────
+  if (h.ssl_info && h.ssl_info.length) {
+    html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">';
+    h.ssl_info.forEach(ssl => {
+      const bad = ssl.is_expired || ssl.is_self_signed;
+      html += `
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <i data-lucide="shield-check" class="w-4 h-4 ${bad ? 'text-yellow-400' : 'text-green-400'}"></i>
+          <span class="font-semibold text-sm">SSL :${ssl.port}</span>
+          ${ssl.is_expired      ? '<span class="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded">Expired</span>'     : ''}
+          ${ssl.is_self_signed  ? '<span class="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded">Self-signed</span>' : ''}
+        </div>
+        <div class="space-y-1 text-sm">
+          <div><span class="text-gray-500">Subject:</span> ${esc(ssl.subject_cn)}</div>
+          <div><span class="text-gray-500">Issuer:</span> ${esc(ssl.issuer_cn)}</div>
+          <div><span class="text-gray-500">Protocol:</span> ${esc(ssl.protocol_version)}</div>
+          <div><span class="text-gray-500">Cipher:</span> <span class="font-mono text-xs">${esc(ssl.cipher_suite)}</span></div>
+          ${ssl.key_bits ? '<div><span class="text-gray-500">Key:</span> ' + ssl.key_bits + ' bits</div>' : ''}
+          ${ssl.not_after ? '<div><span class="text-gray-500">Expires:</span> ' + new Date(ssl.not_after).toLocaleDateString() + '</div>' : ''}
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  // ── CVE table ──────────────────────────────────────────────────────────
+  if (h.cves && h.cves.length) {
+    html += `
+    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden mb-6">
+      <div class="px-6 py-4 border-b border-gray-800">
+        <h3 class="font-semibold flex items-center gap-2">
+          <i data-lucide="alert-triangle" class="w-4 h-4 text-red-400"></i>
+          CVE Vulnerabilities (${h.cves.length})
+        </h3>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="text-xs text-gray-400 uppercase bg-gray-900/50">
+            <tr>
+              <th class="px-6 py-2 text-left">CVE ID</th>
+              <th class="px-6 py-2 text-left w-36">CVSS</th>
+              <th class="px-6 py-2 text-left">Severity</th>
+              <th class="px-6 py-2 text-left">Description</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-800/50">
+            ${h.cves.map(c => {
+              const s = c.severity && c.severity !== 'unknown'
+                ? c.severity
+                : (c.cvss_score >= 9 ? 'critical' : c.cvss_score >= 7 ? 'high' : c.cvss_score >= 4 ? 'medium' : 'low');
+              const barColor = c.cvss_score >= 9 ? 'bg-red-500' : c.cvss_score >= 7 ? 'bg-orange-500'
+                             : c.cvss_score >= 4 ? 'bg-yellow-500' : 'bg-green-500';
+              return `
+            <tr>
+              <td class="px-6 py-2 font-mono text-sm text-cyan-400 whitespace-nowrap">${esc(c.cve_id)}</td>
+              <td class="px-6 py-2">
+                <div class="flex items-center gap-2">
+                  <div class="w-16 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full ${barColor}" style="width:${c.cvss_score * 10}%"></div>
+                  </div>
+                  <span class="text-sm font-mono">${c.cvss_score.toFixed(1)}</span>
+                </div>
+              </td>
+              <td class="px-6 py-2">
+                <span class="${sevClass(s)} px-2 py-0.5 rounded text-xs uppercase">${s}</span>
+              </td>
+              <td class="px-6 py-2 text-sm text-gray-300 max-w-md truncate">${esc(c.description || '\u2014')}</td>
+            </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  }
+
+  // ── default credentials ────────────────────────────────────────────────
+  const creds = (h.credential_results || []).filter(c => c.success);
+  if (creds.length) {
+    html += `
+    <div class="bg-gray-900 border border-red-500/30 rounded-xl overflow-hidden mb-6">
+      <div class="px-6 py-4 border-b border-gray-800 bg-red-500/5">
+        <h3 class="font-semibold flex items-center gap-2 text-red-400">
+          <i data-lucide="key" class="w-4 h-4"></i>
+          Default Credentials Found (${creds.length})
+        </h3>
+      </div>
+      <div class="p-4 space-y-2">
+        ${creds.map(c => `
+        <div class="flex items-center gap-4 bg-gray-800/50 rounded-lg p-3 text-sm">
+          <span class="font-medium">${esc(c.service)}</span>
+          <span class="font-mono text-cyan-400">:${c.port}</span>
+          <span class="font-mono text-red-400">${esc(c.username)}</span>
+          ${c.auth_method ? '<span class="text-xs text-gray-500">' + esc(c.auth_method) + '</span>' : ''}
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  // ── misconfigurations ──────────────────────────────────────────────────
+  if (h.misconfigurations && h.misconfigurations.length) {
+    html += `
+    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden mb-6">
+      <div class="px-6 py-4 border-b border-gray-800">
+        <h3 class="font-semibold flex items-center gap-2">
+          <i data-lucide="settings" class="w-4 h-4 text-yellow-400"></i>
+          Misconfigurations (${h.misconfigurations.length})
+        </h3>
+      </div>
+      <div class="p-4 space-y-3">
+        ${h.misconfigurations.map(m => {
+          const bc = m.severity === 'critical' ? 'border-red-500'
+                   : m.severity === 'high'     ? 'border-orange-500'
+                   : m.severity === 'medium'   ? 'border-yellow-500'
+                   :                             'border-green-500';
+          return `
+        <div class="border-l-2 ${bc} pl-4 py-2">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="font-medium text-sm">${esc(m.category)}</span>
+            <span class="${sevClass(m.severity)} px-2 py-0.5 rounded text-xs uppercase">${m.severity}</span>
+            <span class="text-xs text-gray-500">${esc(m.service)} :${m.port}</span>
+          </div>
+          <p class="text-sm text-gray-400 mt-1">${esc(m.description)}</p>
+        </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
+  $('host-detail-content').innerHTML = html;
+  showView('detail');
+  lucide.createIcons();
+}
+
+
+// ═════════════════════════════════════════════════════════════════════════
+// INIT
+// ═════════════════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+  // allow Enter key to trigger scan
+  $('target-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') startScan();
+  });
+});
+</script>
+</body>
+</html>
