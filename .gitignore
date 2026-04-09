@@ -21,3 +21,6 @@ lab/ssl-certs/
 
 .omc/
 repomix-output.txt
+models/
+logs/
+recordings/
