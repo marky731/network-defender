@@ -20,3 +20,4 @@ lab/ssl-certs/
 *.pdf
 
 .omc/
+repomix-output.txt
