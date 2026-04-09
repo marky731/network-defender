@@ -89,9 +89,9 @@ class StateBuilder:
     def build_network(
         target_subnet: str,
         hosts: List[HostObservation],
-        profile: ScanProfile,
-        scan_start: datetime,
-        scan_end: datetime,
+        profile: Optional[ScanProfile] = None,
+        scan_start: Optional[datetime] = None,
+        scan_end: Optional[datetime] = None,
     ) -> NetworkObservation:
         """Build a NetworkObservation from host observations.
 
@@ -102,11 +102,11 @@ class StateBuilder:
         hosts:
             List of HostObservation instances.
         profile:
-            The scan profile that was used.
+            The scan profile that was used. Defaults to QUICK.
         scan_start:
-            Timestamp when the scan began.
+            Timestamp when the scan began. Optional for RL environments.
         scan_end:
-            Timestamp when the scan finished.
+            Timestamp when the scan finished. Optional for RL environments.
 
         Returns
         -------
@@ -116,7 +116,7 @@ class StateBuilder:
         return NetworkObservation(
             target_subnet=target_subnet,
             hosts=tuple(hosts),
-            scan_profile=profile,
+            scan_profile=profile or ScanProfile.QUICK,
             scan_start=scan_start,
             scan_end=scan_end,
         )

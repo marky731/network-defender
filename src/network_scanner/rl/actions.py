@@ -70,39 +70,39 @@ def compute_action_mask(
     np.ndarray
         Boolean mask of shape (NUM_ACTION_TYPES * MAX_HOSTS,) = (1792,).
     """
-    mask = np.zeros(NUM_ACTION_TYPES * MAX_HOSTS, dtype=np.float32)
+    mask = np.zeros(NUM_ACTION_TYPES * MAX_HOSTS, dtype=np.int8)
 
     for host_idx in range(min(num_hosts, MAX_HOSTS)):
         host_key = str(host_idx)
         host_info = discovered.get(host_key, {})
 
         # DISCOVER_HOST: always valid for hosts in range
-        mask[ActionType.DISCOVER_HOST * MAX_HOSTS + host_idx] = 1.0
+        mask[ActionType.DISCOVER_HOST * MAX_HOSTS + host_idx] = 1
 
         # PORT_SCAN: host must be discovered and alive
         if host_info.get("alive", False):
-            mask[ActionType.PORT_SCAN * MAX_HOSTS + host_idx] = 1.0
+            mask[ActionType.PORT_SCAN * MAX_HOSTS + host_idx] = 1
 
         # DETECT_SERVICES: host must be port-scanned
         if "ports" in host_info:
-            mask[ActionType.DETECT_SERVICES * MAX_HOSTS + host_idx] = 1.0
+            mask[ActionType.DETECT_SERVICES * MAX_HOSTS + host_idx] = 1
 
         # FINGERPRINT_OS: host must be port-scanned
         if "ports" in host_info:
-            mask[ActionType.FINGERPRINT_OS * MAX_HOSTS + host_idx] = 1.0
+            mask[ActionType.FINGERPRINT_OS * MAX_HOSTS + host_idx] = 1
 
         # VULN_ASSESS: services must be detected
         if "services" in host_info:
-            mask[ActionType.VULN_ASSESS * MAX_HOSTS + host_idx] = 1.0
+            mask[ActionType.VULN_ASSESS * MAX_HOSTS + host_idx] = 1
 
         # CHECK_CREDENTIALS: services detected + has credential ports
         if "services" in host_info:
-            host_ports = host_info.get("ports", [])
+            host_ports = [p["port"] if isinstance(p, dict) else p for p in host_info.get("ports", [])]
             if any(p in CREDENTIAL_PORTS for p in host_ports):
-                mask[ActionType.CHECK_CREDENTIALS * MAX_HOSTS + host_idx] = 1.0
+                mask[ActionType.CHECK_CREDENTIALS * MAX_HOSTS + host_idx] = 1
 
         # EXPLOIT: vulnerabilities found
         if "cves" in host_info and len(host_info["cves"]) > 0:
-            mask[ActionType.EXPLOIT * MAX_HOSTS + host_idx] = 1.0
+            mask[ActionType.EXPLOIT * MAX_HOSTS + host_idx] = 1
 
     return mask

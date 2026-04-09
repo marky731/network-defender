@@ -18,3 +18,5 @@ venv/
 lab/ssl-certs/
 
 *.pdf
+
+.omc/
